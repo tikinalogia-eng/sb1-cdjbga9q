@@ -14,7 +14,7 @@ export default function Dashboard() {
   const stats = [
     { 
       label: 'Total Followers', 
-      value: `${(state.analytics.totalFollowers / 1000).toFixed(1)}K`, 
+      value: formatNumber(state.analytics.totalFollowers), 
       change: '+5.2%', 
       icon: Users, 
       color: '#1DA1F2' 
@@ -35,7 +35,7 @@ export default function Dashboard() {
     },
     { 
       label: 'Reach', 
-      value: `${(state.analytics.reach / 1000).toFixed(1)}K`, 
+      value: formatNumber(state.analytics.reach), 
       change: '+12%', 
       icon: TrendingUp, 
       color: '#8B5CF6' 
@@ -45,9 +45,9 @@ export default function Dashboard() {
   // Get today's scheduled posts
   const today = new Date();
   const todaysPosts = state.posts.filter(post => {
-    if (!post.scheduledTime) return false;
+    if (!post.scheduledTime || post.status !== 'scheduled') return false;
     const postDate = new Date(post.scheduledTime);
-    return postDate.toDateString() === today.toDateString() && post.status === 'scheduled';
+    return postDate.toDateString() === today.toDateString();
   });
 
   const getStatusIcon = (status: string) => {
@@ -59,6 +59,13 @@ export default function Dashboard() {
       default:
         return <AlertCircle size={16} color="#EF4444" />;
     }
+  };
+  
+  const formatNumber = (num: number) => {
+    if (num >= 1000) {
+      return `${(num / 1000).toFixed(1)}K`;
+    }
+    return num.toString();
   };
 
   return (

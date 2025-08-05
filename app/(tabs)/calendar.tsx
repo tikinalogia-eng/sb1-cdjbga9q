@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import { Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ChevronLeft, ChevronRight, Clock, Plus, Twitter, Instagram, Facebook, Linkedin } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Clock, Plus, Twitter, Instagram, Facebook, Linkedin, MoreHorizontal, Trash2, Edit3, Alert } from 'lucide-react-native';
 import { useApp } from '@/contexts/AppContext';
 
 export default function Calendar() {
@@ -118,6 +119,21 @@ export default function Calendar() {
     const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
     return getPostsForDate(date).length > 0;
   };
+  
+  const deletePost = (postId: string) => {
+    dispatch({ type: 'DELETE_POST', payload: postId });
+  };
+  
+  const editPost = (post: any) => {
+    // In a real app, you would navigate to compose with the post data
+    // For now, we'll show an alert
+    Alert.alert(
+      'Edit Post',
+      'This would open the compose screen with the post data pre-filled.',
+      [{ text: 'OK' }]
+    );
+  };
+  
   const days = getDaysInMonth(currentDate);
 
   return (
@@ -235,17 +251,33 @@ export default function Calendar() {
                       {post.platforms.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(', ')}
                     </Text>
                   </View>
-                  <TouchableOpacity 
-                    style={styles.editButton}
-                    onPress={() => {
-                      // Navigate to compose screen with post data
-                      // In a real app, we would pass the post data to the compose screen
-                      // For now, we'll just navigate to the compose screen
-                      router.push('/compose');
-                    }}
-                  >
-                    <Text style={styles.editText}>Edit</Text>
-                  </TouchableOpacity>
+                  <View style={styles.postActions}>
+                    <TouchableOpacity 
+                      style={styles.actionButton}
+                      onPress={() => editPost(post)}
+                    >
+                      <Edit3 size={14} color="#64748B" />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.actionButton}
+                      onPress={() => {
+                        Alert.alert(
+                          'Delete Post',
+                          'Are you sure you want to delete this post?',
+                          [
+                            { text: 'Cancel', style: 'cancel' },
+                            { 
+                              text: 'Delete', 
+                              style: 'destructive',
+                              onPress: () => deletePost(post.id)
+                            }
+                          ]
+                        );
+                      }}
+                    >
+                      <Trash2 size={14} color="#EF4444" />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               );
             })}
@@ -431,16 +463,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#64748B',
   },
-  editButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    backgroundColor: '#F1F5F9',
+  postActions: {
+    flexDirection: 'row',
+    gap: 8,
   },
-  editText: {
-    fontSize: 12,
-    color: '#1DA1F2',
-    fontWeight: '500',
+  actionButton: {
+    padding: 8,
+    borderRadius: 6,
+    backgroundColor: '#F8FAFC',
   },
   emptyState: {
     alignItems: 'center',

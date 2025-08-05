@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { User, Bell, Shield, Palette, CircleHelp as HelpCircle, LogOut, ChevronRight, Twitter, Instagram, Facebook, Linkedin, Plus, CircleCheck as CheckCircle, X } from 'lucide-react-native';
@@ -65,6 +65,15 @@ export default function Settings() {
 
   const toggleAccountConnection = (platform: string) => {
     dispatch({ type: 'TOGGLE_ACCOUNT', payload: platform.toLowerCase() });
+    
+    const account = state.connectedAccounts.find(acc => acc.platform === platform.toLowerCase());
+    const action = account?.connected ? 'disconnected' : 'connected';
+    
+    Alert.alert(
+      `Account ${action.charAt(0).toUpperCase() + action.slice(1)}`,
+      `Your ${platform} account has been ${action}.`,
+      [{ text: 'OK' }]
+    );
   };
   
   const calculateMonthlyStats = () => {
@@ -117,7 +126,19 @@ export default function Settings() {
   );
 
   const renderSettingsItem = (item: any) => (
-    <TouchableOpacity key={item.label} style={styles.settingsItem}>
+    <TouchableOpacity 
+      key={item.label} 
+      style={styles.settingsItem}
+      onPress={() => {
+        if (item.action === 'navigate') {
+          Alert.alert(
+            item.label,
+            'This feature would navigate to the respective settings page.',
+            [{ text: 'OK' }]
+          );
+        }
+      }}
+    >
       <View style={styles.settingsItemLeft}>
         <item.icon size={20} color="#64748B" />
         <Text style={styles.settingsItemLabel}>{item.label}</Text>
@@ -193,8 +214,20 @@ export default function Settings() {
           <TouchableOpacity 
             style={styles.logoutButton}
             onPress={() => {
-              // In a real app, you'd handle logout logic here
-              console.log('Logout pressed');
+              Alert.alert(
+                'Sign Out',
+                'Are you sure you want to sign out?',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { 
+                    text: 'Sign Out', 
+                    style: 'destructive',
+                    onPress: () => {
+                      Alert.alert('Signed Out', 'You have been signed out successfully.');
+                    }
+                  }
+                ]
+              );
             }}
           >
             <LogOut size={20} color="#EF4444" />

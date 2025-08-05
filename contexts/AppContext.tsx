@@ -110,10 +110,22 @@ const initialState: AppState = {
 function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
     case 'ADD_POST':
-      return {
+      const newState = {
         ...state,
         posts: [action.payload, ...state.posts],
       };
+      
+      // Update analytics when a post is published
+      if (action.payload.status === 'published' && action.payload.metrics) {
+        newState.analytics = {
+          ...state.analytics,
+          postsThisWeek: state.analytics.postsThisWeek + 1,
+          reach: state.analytics.reach + action.payload.metrics.reach,
+          engagementRate: calculateEngagementRate(newState.posts)
+        };
+      }
+      
+      return newState;
     case 'UPDATE_POST':
       return {
         ...state,
@@ -154,6 +166,20 @@ function appReducer(state: AppState, action: AppAction): AppState {
   }
 }
 
+function calculateEngagementRate(posts: Post[]): number {
+  const publishedPosts = posts.filter(post => post.status === 'published' && post.metrics);
+  if (publishedPosts.length === 0) return 0;
+  
+  const totalEngagement = publishedPosts.reduce((sum, post) => {
+    const metrics = post.metrics!;
+    return sum + metrics.likes + metrics.comments + metrics.shares;
+  }, 0);
+  
+  const totalReach = publishedPosts.reduce((sum, post) => sum + (post.metrics?.reach || 0), 0);
+  
+  return totalReach > 0 ? Number(((totalEngagement / totalReach) * 100).toFixed(1)) : 0;
+}
+
 const AppContext = createContext<{
   state: AppState;
   dispatch: React.Dispatch<AppAction>;
@@ -169,7 +195,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Save data to AsyncStorage whenever state changes
   useEffect(() => {
-    saveData();
+    if (state !== initialState) {
+      saveData();
+    }
   }, [state]);
 
   const loadData = async () => {
@@ -186,23 +214,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         dispatch({ type: 'LOAD_DATA', payload: parsedData });
       }
     } catch (error) {
-      console.error('Error loading data:', error);
       // If we're on web and there's an error, we'll just use the initial state
       if (Platform.OS === 'web') {
-        console.log('Using initial state for web platform');
+        // Web platform doesn't have AsyncStorage, use localStorage instead
+        try {
+          const savedData = localStorage.getItem('socialMediaAppData');
+          if (savedData) {
+            const parsedData = JSON.parse(savedData);
+            parsedData.posts = parsedData.posts.map((post: any) => ({
+              ...post,
+              createdAt: new Date(post.createdAt),
+              scheduledTime: post.scheduledTime ? new Date(post.scheduledTime) : undefined,
+            }));
+            dispatch({ type: 'LOAD_DATA', payload: parsedData });
+          }
+        } catch (webError) {
+          console.log('Using initial state for web platform');
+        }
       }
     }
   };
 
   const saveData = async () => {
     try {
-      await AsyncStorage.setItem('socialMediaAppData', JSON.stringify(state));
-    } catch (error) {
-      console.error('Error saving data:', error);
-      // If we're on web and there's an error, we'll log it but continue
       if (Platform.OS === 'web') {
-        console.log('Note: Data persistence may be limited in web environment');
+        localStorage.setItem('socialMediaAppData', JSON.stringify(state));
+      } else {
+        await AsyncStorage.setItem('socialMediaAppData', JSON.stringify(state));
       }
+    } catch (error) {
+      console.log('Note: Data persistence may be limited in this environment');
     }
   };
 

@@ -1,9 +1,14 @@
 import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, Alert, Switch, Platform } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Twitter, Instagram, Facebook, Linkedin, Calendar as CalendarIcon } from 'lucide-react-native';
+import { Twitter, Instagram, Facebook, Linkedin, Calendar as CalendarIcon, Clock } from 'lucide-react-native';
 import { useApp } from '@/contexts/AppContext';
-import DateTimePicker from '@react-native-community/datetimepicker';
+
+// Only import DateTimePicker for native platforms
+let DateTimePicker: any = null;
+if (Platform.OS !== 'web') {
+  DateTimePicker = require('@react-native-community/datetimepicker').default;
+}
 
 export default function ComposeScreen() {
   const { state, dispatch } = useApp();
@@ -11,8 +16,13 @@ export default function ComposeScreen() {
   const [postText, setPostText] = useState('');
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [isScheduled, setIsScheduled] = useState(false);
-  const [scheduledDate, setScheduledDate] = useState(new Date());
+  const [scheduledDate, setScheduledDate] = useState(() => {
+    const now = new Date();
+    now.setHours(now.getHours() + 1); // Default to 1 hour from now
+    return now;
+  });
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
   const handlePlatformToggle = (platform: string) => {
     if (selectedPlatforms.includes(platform)) {
@@ -39,10 +49,26 @@ export default function ComposeScreen() {
       status: isScheduled ? 'scheduled' : 'published',
       createdAt: new Date(),
       ...(isScheduled && { scheduledTime: scheduledDate }),
-      metrics: isScheduled ? undefined : { likes: 0, comments: 0, shares: 0, reach: 0 }
+      metrics: isScheduled ? undefined : {
+        likes: Math.floor(Math.random() * 100) + 10,
+        comments: Math.floor(Math.random() * 20) + 2,
+        shares: Math.floor(Math.random() * 30) + 5,
+        reach: Math.floor(Math.random() * 1000) + 100
+      }
     };
 
     dispatch({ type: 'ADD_POST', payload: newPost });
+    
+    // Update analytics
+    const currentAnalytics = state.analytics;
+    dispatch({
+      type: 'UPDATE_ANALYTICS',
+      payload: {
+        postsThisWeek: currentAnalytics.postsThisWeek + 1,
+        reach: currentAnalytics.reach + (newPost.metrics?.reach || 0)
+      }
+    });
+    
     Alert.alert(
       isScheduled ? 'Post Scheduled' : 'Post Published',
       isScheduled ? 'Your post has been scheduled successfully!' : 'Your post has been published successfully!',
@@ -54,6 +80,13 @@ export default function ComposeScreen() {
     setShowDatePicker(false);
     if (selectedDate) {
       setScheduledDate(selectedDate);
+    }
+  };
+
+  const handleTimeChange = (event: any, selectedTime?: Date) => {
+    setShowTimePicker(false);
+    if (selectedTime) {
+      setScheduledDate(selectedTime);
     }
   };
 
@@ -129,10 +162,21 @@ export default function ComposeScreen() {
               >
                 <CalendarIcon size={16} color="#64748B" />
                 <Text style={styles.dateText}>
-                  {scheduledDate.toLocaleDateString('en-US', { 
+                  {scheduledDate.toLocaleDateString('en-US', {
                     weekday: 'short',
-                    month: 'short', 
-                    day: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                  })}
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.timePickerButton}
+                onPress={() => setShowTimePicker(true)}
+              >
+                <Clock size={16} color="#64748B" />
+                <Text style={styles.dateText}>
+                  {scheduledDate.toLocaleTimeString('en-US', {
                     hour: 'numeric',
                     minute: '2-digit',
                     hour12: true
@@ -143,13 +187,16 @@ export default function ComposeScreen() {
               {showDatePicker && (
                 Platform.OS === 'web' ? (
                   <View style={styles.webDatePickerContainer}>
-                    <input 
-                      type="datetime-local" 
+                    <input
+                      type="date"
                       value={scheduledDate.toISOString().slice(0, 16)}
-                      min={new Date().toISOString().slice(0, 16)}
+                      min={new Date().toISOString().slice(0, 10)}
                       onChange={(e) => {
                         if (e.target.value) {
-                          setScheduledDate(new Date(e.target.value));
+                          const newDate = new Date(e.target.value);
+                          newDate.setHours(scheduledDate.getHours());
+                          newDate.setMinutes(scheduledDate.getMinutes());
+                          setScheduledDate(newDate);
                           setShowDatePicker(false);
                         }
                       }}
@@ -166,10 +213,46 @@ export default function ComposeScreen() {
                 ) : (
                   <DateTimePicker
                     value={scheduledDate}
-                    mode="datetime"
+                    mode="date"
                     display="default"
                     onChange={handleDateChange}
                     minimumDate={new Date()}
+                  />
+                )
+              )}
+              
+              {showTimePicker && (
+                Platform.OS === 'web' ? (
+                  <View style={styles.webDatePickerContainer}>
+                    <input
+                      type="time"
+                      value={scheduledDate.toTimeString().slice(0, 5)}
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          const [hours, minutes] = e.target.value.split(':');
+                          const newDate = new Date(scheduledDate);
+                          newDate.setHours(parseInt(hours));
+                          newDate.setMinutes(parseInt(minutes));
+                          setScheduledDate(newDate);
+                          setShowTimePicker(false);
+                        }
+                      }}
+                      style={{
+                        padding: 10,
+                        borderRadius: 8,
+                        borderColor: '#E2E8F0',
+                        borderWidth: 1,
+                        marginTop: 8,
+                        width: '100%'
+                      }}
+                    />
+                  </View>
+                ) : DateTimePicker && (
+                  <DateTimePicker
+                    value={scheduledDate}
+                    mode="time"
+                    display="default"
+                    onChange={handleTimeChange}
                   />
                 )
               )}
@@ -274,6 +357,8 @@ const styles = StyleSheet.create({
   },
   dateTimeContainer: {
     marginTop: 8,
+    flexDirection: 'row',
+    gap: 8,
   },
   datePickerButton: {
     flexDirection: 'row',
@@ -282,6 +367,17 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
+    marginRight: 8,
+    flex: 1,
+  },
+  timePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    flex: 1,
   },
   dateText: {
     fontSize: 14,

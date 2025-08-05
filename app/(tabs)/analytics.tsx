@@ -36,7 +36,7 @@ export default function Analytics() {
   const overviewStats = [
     { 
       label: 'Total Reach', 
-      value: `${(analytics.totalReach / 1000).toFixed(1)}K`, 
+      value: analytics.totalReach > 1000 ? `${(analytics.totalReach / 1000).toFixed(1)}K` : analytics.totalReach.toString(), 
       change: '+12.5%', 
       trend: 'up', 
       icon: Eye, 
@@ -44,7 +44,7 @@ export default function Analytics() {
     },
     { 
       label: 'Engagement', 
-      value: `${(analytics.totalEngagement / 1000).toFixed(1)}K`, 
+      value: analytics.totalEngagement > 1000 ? `${(analytics.totalEngagement / 1000).toFixed(1)}K` : analytics.totalEngagement.toString(), 
       change: '+8.3%', 
       trend: 'up', 
       icon: Heart, 
@@ -60,7 +60,7 @@ export default function Analytics() {
     },
     { 
       label: 'Shares', 
-      value: `${(analytics.totalShares / 1000).toFixed(1)}K`, 
+      value: analytics.totalShares > 1000 ? `${(analytics.totalShares / 1000).toFixed(1)}K` : analytics.totalShares.toString(), 
       change: '-2.1%', 
       trend: 'down', 
       icon: Share2, 
@@ -174,7 +174,10 @@ export default function Analytics() {
                 </View>
                 <View style={styles.postMetrics}>
                   <Text style={styles.metricText}>
-                    {((post.metrics?.reach || 0) / 1000).toFixed(1)}K reach
+                    {(post.metrics?.reach || 0) > 1000 
+                      ? `${((post.metrics?.reach || 0) / 1000).toFixed(1)}K reach`
+                      : `${post.metrics?.reach || 0} reach`
+                    }
                   </Text>
                 </View>
               </View>
@@ -185,7 +188,10 @@ export default function Analytics() {
                 <View style={styles.statItem}>
                   <Heart size={16} color="#E91E63" />
                   <Text style={styles.statText}>
-                    {((post.metrics?.likes || 0) / 1000).toFixed(1)}K
+                    {(post.metrics?.likes || 0) > 1000 
+                      ? `${((post.metrics?.likes || 0) / 1000).toFixed(1)}K`
+                      : (post.metrics?.likes || 0).toString()
+                    }
                   </Text>
                 </View>
                 <View style={styles.statItem}>
@@ -199,7 +205,10 @@ export default function Analytics() {
                 <View style={styles.statItem}>
                   <BarChart3 size={16} color="#8B5CF6" />
                   <Text style={styles.statText}>
-                    {(((post.metrics?.likes || 0) + (post.metrics?.comments || 0) + (post.metrics?.shares || 0)) / 1000).toFixed(1)}K
+                    {((post.metrics?.likes || 0) + (post.metrics?.comments || 0) + (post.metrics?.shares || 0)) > 1000
+                      ? `${(((post.metrics?.likes || 0) + (post.metrics?.comments || 0) + (post.metrics?.shares || 0)) / 1000).toFixed(1)}K`
+                      : ((post.metrics?.likes || 0) + (post.metrics?.comments || 0) + (post.metrics?.shares || 0)).toString()
+                    }
                   </Text>
                 </View>
               </View>
